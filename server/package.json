@@ -8,7 +8,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "check-db": "tsx src/scripts/check-db.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "migrate:up": "node -r dotenv/config node_modules/.bin/node-pg-migrate up",
+    "migrate:down": "node -r dotenv/config node_modules/.bin/node-pg-migrate down",
+    "migrate:create": "node -r dotenv/config node_modules/.bin/node-pg-migrate create"
   },
   "keywords": [],
   "author": "",
@@ -18,8 +21,12 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "glob": "^13.0.6",
     "helmet": "^8.3.0",
-    "pg": "^8.23.0"
+    "jiti": "^2.7.0",
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.23.0",
+    "yargs": "^18.1.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
