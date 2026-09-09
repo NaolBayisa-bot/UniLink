@@ -8,6 +8,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "check-db": "tsx src/scripts/check-db.ts",
+    "check-telegram-bot": "tsx src/scripts/check-telegram-bot.ts",
+    "check-cloudinary": "tsx src/scripts/check-cloudinary.ts",
+    "seed": "tsx src/scripts/seed.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate:up": "node -r dotenv/config node_modules/.bin/node-pg-migrate up",
     "migrate:down": "node -r dotenv/config node_modules/.bin/node-pg-migrate down",
@@ -18,6 +21,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
