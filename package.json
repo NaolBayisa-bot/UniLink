@@ -1,8 +1,0 @@
-{
-  "name": "unilink",
-  "private": true,
-  "workspaces": [
-    "client",
-    "server"
-  ]
-}
