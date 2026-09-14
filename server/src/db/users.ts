@@ -31,6 +31,32 @@ export type QueryFn = (
   params?: unknown[],
 ) => Promise<{ rows: unknown[]; rowCount: number | null }>;
 
+/** Identity + verification data used to upsert a user on signup. */
+export interface UpsertUserInput {
+  telegram_id: number;
+  telegram_username: string | null;
+  email: string;
+  email_verified: boolean;
+}
+
+/**
+ * The (own-user) row shape returned by an upsert. Includes a couple of fields
+ * the user may read about themselves, plus the safe public fields.
+ */
+export interface OwnUserRow {
+  id: string;
+  telegram_id: string;
+  telegram_username: string | null;
+  email: string | null;
+  email_verified: boolean;
+  nickname: string | null;
+  gender: string | null;
+  photo_public_id: string | null;
+  custom_interest_text: string | null;
+  status: string;
+  created_at: Date;
+}
+
 const PUBLIC_PROFILE_COLUMNS = `
   id,
   nickname,
@@ -165,4 +191,47 @@ export async function adminCorrectGender(
     [userId, gender],
   );
   return { rowCount: result ? result.rowCount : null };
+}
+
+/**
+ * Upsert a user keyed on telegram_id (the primary external identity).
+ *
+ * - New user: inserts with email / email_verified taken from the VERIFIED
+ *   Google payload (email_verified is always true here — never client-supplied).
+ * - Existing user: conflict on telegram_id -> fetches the existing row, and only
+ *   refreshes telegram_username; the stored email is NOT overwritten on re-login.
+ *
+ * Only the values passed in `input` are trusted; callers must derive telegram_id,
+ * telegram_username, email, and email_verified from server-side verification, never
+ * from the request body.
+ */
+export async function upsertUserByTelegram(
+  input: UpsertUserInput,
+  q: QueryFn = query,
+): Promise<OwnUserRow | null> {
+  const { rows } = await q(
+    `INSERT INTO users (telegram_id, telegram_username, email, email_verified)
+     VALUES ($1::bigint, $2, $3, $4)
+     ON CONFLICT (telegram_id) DO UPDATE
+       SET telegram_username = EXCLUDED.telegram_username
+     RETURNING id,
+               telegram_id,
+               telegram_username,
+               email,
+               email_verified,
+               nickname,
+               gender,
+               photo_public_id,
+               custom_interest_text,
+               status,
+               created_at`,
+    [
+      input.telegram_id,
+      input.telegram_username,
+      input.email,
+      input.email_verified,
+    ],
+  );
+  if (rows.length === 0) return null;
+  return rows[0] as unknown as OwnUserRow;
 }

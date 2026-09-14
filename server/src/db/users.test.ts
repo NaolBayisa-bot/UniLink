@@ -6,6 +6,7 @@ import {
   getPublicProfile,
   QueryFn,
   updateOwnProfile,
+  upsertUserByTelegram,
 } from './users';
 
 const USER_A = 'c074b9cb-48f0-4900-9040-2718ad82ce55';
@@ -126,4 +127,68 @@ describe('integration (live DB, read-only)', () => {
     assert.ok(after);
     assert.equal(after.gender, before.gender, 'gender must be unchanged after self-update');
   });
+describe('upsertUserByTelegram', () => {
+  const input = {
+    telegram_id: 1001,
+    telegram_username: 'testuser_a',
+    email: 'user@example.com',
+    email_verified: true,
+  };
+
+  it('returns the upserted row with the user id and telegram_id', async () => {
+    const row = {
+      id: USER_A,
+      telegram_id: '1001',
+      telegram_username: 'testuser_a',
+      email: 'user@example.com',
+      email_verified: true,
+      nickname: null,
+      gender: null,
+      photo_public_id: null,
+      custom_interest_text: null,
+      status: 'active',
+      created_at: new Date('2026-01-01T00:00:00Z'),
+    };
+    const q: QueryFn = async () => ({ rows: [row], rowCount: 1 });
+
+    const result = await upsertUserByTelegram(input, q);
+    assert.equal(result?.id, USER_A);
+    assert.equal(result?.telegram_id, '1001');
+  });
+
+  it('uses ON CONFLICT (telegram_id) and passes params in order', async () => {
+    const { calls } = trackQuery();
+    const q: QueryFn = async (text, params) => {
+      calls.push({ text, params });
+      return { rows: [], rowCount: 1 };
+    };
+
+    await upsertUserByTelegram(input, q);
+
+    const sql = calls[0].text;
+    assert.match(sql, /INSERT INTO users\s*\([^)]*telegram_id[^)]*\)/i);
+    assert.match(sql, /ON CONFLICT \(telegram_id\) DO UPDATE/i);
+    // $1::bigint first, then the other verified values in order.
+    assert.deepEqual(calls[0].params, [1001, 'testuser_a', 'user@example.com', true]);
+  });
+
+  it('does not overwrite stored email on an existing owner (only refreshes username)', async () => {
+    const { calls } = trackQuery();
+    const q: QueryFn = async (text, params) => {
+      calls.push({ text, params });
+      return { rows: [], rowCount: 1 };
+    };
+
+    await upsertUserByTelegram(input, q);
+    const sql = calls[0].text;
+    assert.match(sql, /SET\s+telegram_username\s*=\s*EXCLUDED\.telegram_username/i);
+    // email must NOT be in the DO UPDATE SET clause.
+    assert.ok(!/SET[^)]*email\s*=/i.test(sql), 'email must not be overwritten on conflict');
+  });
+
+  it('returns null when no row is returned', async () => {
+    const q: QueryFn = async () => ({ rows: [], rowCount: 0 });
+    assert.equal(await upsertUserByTelegram(input, q), null);
+  });
+});
 });

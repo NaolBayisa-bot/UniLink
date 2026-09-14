@@ -11,7 +11,7 @@
     "check-telegram-bot": "tsx src/scripts/check-telegram-bot.ts",
     "check-cloudinary": "tsx src/scripts/check-cloudinary.ts",
     "seed": "tsx src/scripts/seed.ts",
-    "test": "tsx --test --test-force-exit src/services/telegram.test.ts src/db/users.test.ts src/middleware/authorization.test.ts",
+    "test": "tsx --test --test-force-exit src/routes/auth.integration.test.ts src/routes/auth.test.ts src/services/jwt.test.ts src/services/google.test.ts src/services/telegram.test.ts src/db/users.test.ts src/middleware/authorization.test.ts",
     "migrate:up": "node -r dotenv/config node_modules/.bin/node-pg-migrate up",
     "migrate:down": "node -r dotenv/config node_modules/.bin/node-pg-migrate down",
     "migrate:create": "node -r dotenv/config node_modules/.bin/node-pg-migrate create"
@@ -26,8 +26,10 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "glob": "^13.0.6",
+    "google-auth-library": "^11.0.2",
     "helmet": "^8.3.0",
     "jiti": "^2.7.0",
+    "jsonwebtoken": "^9.0.3",
     "node-pg-migrate": "^9.0.0",
     "pg": "^8.23.0",
     "yargs": "^18.1.0"
@@ -35,6 +37,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.5.0",
     "@types/pg": "^8.23.1",
     "ts-node": "^11.0.0-beta.1",
