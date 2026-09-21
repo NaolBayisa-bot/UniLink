@@ -1,5 +1,6 @@
 import { HttpError, matchExistsBetween } from '../middleware/authorization';
 import { query } from './query';
+import { pool } from './pool';
 
 /**
  * The only fields safe to expose about ANOTHER user without an established
@@ -53,6 +54,7 @@ export interface OwnUserRow {
   gender: string | null;
   photo_public_id: string | null;
   custom_interest_text: string | null;
+  prompts: unknown[] | null;
   status: string;
   created_at: Date;
 }
@@ -126,8 +128,11 @@ const SELF_EDITABLE_FIELDS = [
   'real_name',
   'department',
   'photo_public_id',
+  // Display-only free text. PRIVACY / SCORING INVARIANT: never join this into
+  // the browse-scoring query (enforced in Task 39); see profile.ts.
   'custom_interest_text',
   'telegram_username',
+  'prompts',
 ] as const;
 
 /**
@@ -223,6 +228,7 @@ export async function upsertUserByTelegram(
                gender,
                photo_public_id,
                custom_interest_text,
+               prompts,
                status,
                created_at`,
     [
@@ -234,4 +240,68 @@ export async function upsertUserByTelegram(
   );
   if (rows.length === 0) return null;
   return rows[0] as unknown as OwnUserRow;
+}
+export async function validateKeywordIds(
+  keywordIds: number[],
+  q: QueryFn = query,
+): Promise<void> {
+  if (!Array.isArray(keywordIds)) {
+    throw new HttpError(400, 'keyword_ids must be an array');
+  }
+  if (keywordIds.length < 5 || keywordIds.length > 10) {
+    throw new HttpError(
+      400,
+      `keyword_ids must contain between 5 and 10 items (got ${keywordIds.length})`,
+    );
+  }
+  if (keywordIds.some((id) => typeof id !== 'number' || !Number.isInteger(id) || id < 1)) {
+    throw new HttpError(400, 'each keyword_id must be a positive integer');
+  }
+
+  // Verify every id exists in the keywords table.
+  const { rows } = await q<{ cnt: string }>(
+    `SELECT COUNT(*) AS cnt
+       FROM keywords
+      WHERE id = ANY($1::int[])`,
+    [keywordIds],
+  );
+  const existingCount = parseInt(rows[0].cnt, 10);
+  if (existingCount !== keywordIds.length) {
+    throw new HttpError(400, 'one or more keyword_ids do not exist');
+  }
+}
+
+/**
+ * Within a single transaction: delete all existing user_keywords for `userId`,
+ * then re-insert the given keyword_ids.  Atomic — either both happen or neither.
+ */
+export async function replaceUserKeywords(
+  userId: string,
+  keywordIds: number[],
+  pgPool: typeof import('./pool').pool = pool,
+): Promise<void> {
+  const client = await pgPool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `DELETE FROM user_keywords
+       WHERE user_id = $1::uuid`,
+      [userId],
+    );
+    if (keywordIds.length > 0) {
+      // Use UNNEST so we don't have to build a giant VALUES list; single param
+      // array handles any array length cleanly.
+      await client.query(
+        `INSERT INTO user_keywords (user_id, keyword_id)
+         SELECT $1::uuid, unnest($2::int[])`,
+        [userId, keywordIds],
+      );
+    }
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => undefined);
+    throw err;
+  } finally {
+    client.release();
+  }
 }
