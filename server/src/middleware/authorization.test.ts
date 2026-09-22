@@ -4,10 +4,12 @@ import { Request } from 'express';
 import { QueryResult } from 'pg';
 import {
   assertIsSelf,
+  blockedPairPredicate,
   hasOpenReportAgainst,
   HttpError,
   isBlockedPair,
   matchExistsBetween,
+  openReportAgainstPredicate,
   QueryFn,
 } from './authorization';
 
@@ -95,6 +97,20 @@ describe('isBlockedPair', () => {
   });
 });
 
+describe('blockedPairPredicate (shared with the browse filter)', () => {
+  it('renders a check in BOTH directions', () => {
+    const sql = blockedPairPredicate('$1::uuid', '$2::uuid');
+    assert.match(sql, /blocker_id\s*=\s*\$1::uuid\s+AND\s+blocked_id\s*=\s*\$2::uuid/i);
+    assert.match(sql, /blocker_id\s*=\s*\$2::uuid\s+AND\s+blocked_id\s*=\s*\$1::uuid/i);
+  });
+
+  it('accepts a column expression, for correlating candidate rows in browse', () => {
+    const sql = blockedPairPredicate('$1::uuid', 'users.id');
+    assert.match(sql, /blocker_id\s*=\s*\$1::uuid\s+AND\s+blocked_id\s*=\s*users\.id/i);
+    assert.match(sql, /blocker_id\s*=\s*users\.id\s+AND\s+blocked_id\s*=\s*\$1::uuid/i);
+  });
+});
+
 describe('hasOpenReportAgainst', () => {
   it('returns true when an open report exists', async () => {
     const q: QueryFn = async (text, params) => {
@@ -113,6 +129,20 @@ describe('hasOpenReportAgainst', () => {
   it('returns false when there are no reports', async () => {
     const q: QueryFn = async () => result([]);
     assert.equal(await hasOpenReportAgainst(USER_A, q), false);
+  });
+});
+
+describe('openReportAgainstPredicate (shared with the browse filter)', () => {
+  it("renders an OPEN-only check against the given expression", () => {
+    const sql = openReportAgainstPredicate('$1::uuid');
+    assert.match(sql, /reported_id\s*=\s*\$1::uuid/i);
+    assert.match(sql, /status\s*=\s*'open'/i);
+    assert.ok(!/resolved/i.test(sql), 'resolved reports must never match');
+  });
+
+  it('accepts a column expression, for correlating candidate rows in browse', () => {
+    const sql = openReportAgainstPredicate('users.id');
+    assert.match(sql, /reported_id\s*=\s*users\.id\s+AND\s+status\s*=\s*'open'/i);
   });
 });
 

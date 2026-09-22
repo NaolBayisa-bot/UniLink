@@ -11,7 +11,7 @@
     "check-telegram-bot": "tsx src/scripts/check-telegram-bot.ts",
     "check-cloudinary": "tsx src/scripts/check-cloudinary.ts",
     "seed": "tsx src/scripts/seed.ts",
-    "test": "tsx --test --test-force-exit src/routes/auth.integration.test.ts src/routes/auth.test.ts src/routes/profile.test.ts src/routes/photo.test.ts src/services/cloudinary.test.ts src/services/jwt.test.ts src/services/google.test.ts src/services/telegram.test.ts src/db/users.test.ts src/middleware/authorization.test.ts",
+    "test": "tsx --test --test-force-exit src/routes/auth.integration.test.ts src/routes/auth.test.ts src/routes/browse.test.ts src/routes/profile.test.ts src/routes/photo.test.ts src/services/cloudinary.test.ts src/services/jwt.test.ts src/services/google.test.ts src/services/telegram.test.ts src/db/users.test.ts src/middleware/authorization.test.ts",
     "migrate:up": "node -r dotenv/config node_modules/.bin/node-pg-migrate up",
     "migrate:down": "node -r dotenv/config node_modules/.bin/node-pg-migrate down",
     "migrate:create": "node -r dotenv/config node_modules/.bin/node-pg-migrate create"

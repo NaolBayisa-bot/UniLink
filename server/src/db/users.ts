@@ -1,4 +1,9 @@
-import { HttpError, matchExistsBetween } from '../middleware/authorization';
+import {
+  blockedPairPredicate,
+  HttpError,
+  matchExistsBetween,
+  openReportAgainstPredicate,
+} from '../middleware/authorization';
 import { query } from './query';
 import { pool } from './pool';
 
@@ -115,6 +120,72 @@ export async function getRevealedProfile(
   );
   if (rows.length === 0) return null;
   return rows[0] as unknown as RevealedProfile;
+}
+
+/**
+ * How long a pass hides its target from the passer's browse feed. After this
+ * window the pass expires and the user becomes browsable again.
+ */
+const PASS_EXCLUSION_WINDOW_DAYS = 15;
+
+/**
+ * Browse candidates for `callerId`: users whose gender DIFFERS from the
+ * caller's own, excluding the caller, restricted to active accounts. Only the
+ * Task-22 public-profile field set (PUBLIC_PROFILE_COLUMNS) is selected.
+ *
+ * ALSO EXCLUDED:
+ * - caller-scoped (derived from the caller's own rows): users the caller has
+ *   already liked (their `to_user_id` rows in `likes`); users the caller passed
+ *   within the last PASS_EXCLUSION_WINDOW_DAYS (15) days — an OLDER pass has
+ *   expired, so that user is browsable again; anyone in a blocking relationship
+ *   with the caller in EITHER direction, using the same predicate as
+ *   isBlockedPair (blocking is mutual for visibility);
+ * - GLOBAL moderation state (not caller-scoped): anyone with an OPEN report
+ *   against them, using the same predicate as hasOpenReportAgainst. Once the
+ *   report is marked resolved the user reappears.
+ *
+ * SECURITY INVARIANT (gender + caller-scoped exclusion set are server-side
+ * only): both the comparison gender and the caller-scoped excluded ids are
+ * derived from THE CALLER'S OWN ROWS, identified by $1 — which is always
+ * req.userId. Neither the caller's gender nor the exclusion set is accepted as
+ * an argument, so a forged `gender` or a forged liked/passed/blocked id
+ * anywhere in the request has no effect. The open-report exclusion is read from
+ * moderation state, also never from the request.
+ *
+ * The scalar subquery also fails CLOSED: if the caller's row is missing or their
+ * gender is still NULL, the subquery yields NULL and `gender <> NULL` matches no
+ * rows (an empty feed) rather than everyone.
+ */
+export async function browseProfiles(
+  callerId: string,
+  q: QueryFn = query,
+): Promise<PublicProfile[]> {
+  const { rows } = await q(
+    `SELECT ${PUBLIC_PROFILE_COLUMNS}
+       FROM users
+      WHERE id <> $1::uuid
+        AND status = 'active'
+        AND gender <> (SELECT gender FROM users WHERE id = $1::uuid)
+        AND id NOT IN (
+              SELECT to_user_id FROM likes WHERE from_user_id = $1::uuid
+            )
+        AND id NOT IN (
+              SELECT to_user_id FROM passes
+               WHERE from_user_id = $1::uuid
+                 AND created_at > now() - interval '${PASS_EXCLUSION_WINDOW_DAYS} days'
+            )
+        AND NOT EXISTS (
+              SELECT 1 FROM blocks
+               WHERE ${blockedPairPredicate('$1::uuid', 'users.id')}
+            )
+        AND NOT EXISTS (
+              SELECT 1 FROM reports
+               WHERE ${openReportAgainstPredicate('users.id')}
+            )
+      ORDER BY created_at DESC`,
+    [callerId],
+  );
+  return rows as unknown as PublicProfile[];
 }
 
 /**

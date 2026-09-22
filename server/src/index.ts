@@ -6,6 +6,7 @@ import { query } from './db/query';
 import { authRouter } from './routes/auth';
 import { profileRouter } from './routes/profile';
 import { photoRouter } from './routes/photo';
+import { browseRouter } from './routes/browse';
 import jwtAuth from './middleware/jwt-auth';
 
 const app = express();
@@ -35,6 +36,11 @@ app.use('/profile', jwtAuth, profileRouter);
 // to the authenticated caller's own folder. Protected by jwtAuth (req.userId is
 // the single source of truth for identity).
 app.use('/photo', jwtAuth, photoRouter);
+
+// GET /browse — active users whose gender differs from the caller's. Both the
+// caller's identity and their gender come from req.userId (the single source of
+// truth for identity); request bodies/queries are never consulted.
+app.use('/browse', jwtAuth, browseRouter);
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
