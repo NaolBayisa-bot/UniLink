@@ -21,6 +21,10 @@ export interface RevealedProfile extends PublicProfile {
     department: string | null;
     telegram_username: string | null;
 }
+/**
+ * A DB query function. Defaults to the app's real `query`, but may be injected
+ * in tests for hermetic / non-destructive assertions.
+ */
 export type QueryFn = (text: string, params?: unknown[]) => Promise<{
     rows: unknown[];
     rowCount: number | null;
@@ -91,6 +95,27 @@ export declare function getRevealedProfile(requesterId: string, targetId: string
  * The scalar subquery also fails CLOSED: if the caller's row is missing or their
  * gender is still NULL, the subquery yields NULL and `gender <> NULL` matches no
  * rows (an empty feed) rather than everyone.
+ *
+ * RANKING (Task 39 — shared-keyword scoring): candidates are ordered by the
+ * number of keywords they share with the caller, highest first, then by recency
+ * (created_at DESC). The shared-keyword count is a correlated scalar subquery:
+ * a self-join of `user_keywords` pairing the caller's keyword rows with each
+ * candidate's keyword rows on a common keyword_id, counting the matches.
+ *
+ * SECURITY / PRIVACY INVARIANTS preserved by the ranking:
+ * - The score is computed ONLY from the caller-scoped `user_keywords` join
+ *   (caller identified by $1) — it introduces NO new parameter, so the query
+ *   still takes exactly ONE argument (the caller id) and a forged gender/id in
+ *   the request cannot influence ranking.
+ * - The user-supplied free text `custom_interest_text` is NEVER joined into (or
+ *   read by) this scoring query — only the shared keyword set is.
+ * - `score` is a DISPLAY-ONLY ordering key: it is used solely in ORDER BY and is
+ *   NOT added to the SELECT list, so the response stays the Task-22 public-field
+ *   set only (no score leaks to the client).
+ * - A candidate sharing zero keywords scores 0 (COUNT over an empty join) and
+ *   simply sorts last by score, falling back to recency — it still fails CLOSED.
+ *
+ * LIMIT 20 caps the feed at the 20 best-ranked candidates.
  */
 export declare function browseProfiles(callerId: string, q?: QueryFn): Promise<PublicProfile[]>;
 /**
@@ -133,3 +158,48 @@ export declare function validateKeywordIds(keywordIds: number[], q?: QueryFn): P
  * then re-insert the given keyword_ids.  Atomic — either both happen or neither.
  */
 export declare function replaceUserKeywords(userId: string, keywordIds: number[], pgPool?: typeof import('./pool').pool): Promise<void>;
+/**
+ * The maximum number of likes a user may send within a single UTC day. When a
+ * caller is at this count, further like attempts return 429 until the daily
+ * counter resets at the next UTC midnight.
+ */
+export declare const DAILY_LIKE_LIMIT = 30;
+/**
+ * True when `lastResetAt` is strictly BEFORE the UTC midnight that begins
+ * `now`'s day — i.e. the daily like counter is stale and must be reset.
+ *
+ * The comparison is against today's UTC midnight (00:00:00Z). A `lastResetAt`
+ * exactly at midnight is NOT before it, so a user whose counter was reset at
+ * the boundary keeps their count until the next day.
+ */
+export declare function needsDailyReset(lastResetAt: Date, now: Date): boolean;
+/** The result of a like attempt: whether a NEW like row was written, and the caller's post-call daily count. */
+export interface LikeResult {
+    liked: boolean;
+    likes_sent_today: number;
+}
+/**
+ * Record that `callerId` likes `targetId`, enforcing the daily like cap.
+ *
+ * On every call:
+ * 1. Read the caller's `likes_sent_today` and `likes_reset_at` from their OWN
+ *    row (identified by $1 = the authenticated caller). A missing row throws
+ *    404 — it fails CLOSED rather than granting a fresh allowance.
+ * 2. If `likes_reset_at` is before today's UTC midnight, the daily window has
+ *    rolled over: reset `likes_sent_today = 0` and bump `likes_reset_at = now()`.
+ *    The in-memory count is treated as 0 for the rest of this call.
+ * 3. If the (possibly just-reset) count is >= DAILY_LIKE_LIMIT (30), throw
+ *    HttpError(429) — the caller is over cap for today.
+ * 4. Otherwise insert the like (ON CONFLICT DO NOTHING, so re-liking the same
+ *    target is idempotent) and, ONLY when a new row was actually written,
+ *    increment `likes_sent_today` by 1. A duplicate like therefore never burns
+ *    the daily allowance.
+ *
+ * SECURITY INVARIANT: the identity comes only from `callerId` (the caller's own
+ * row). Nothing about the reset window, the cap, or the counter is accepted as
+ * an argument, so no request field can widen the cap or dodge the reset.
+ *
+ * @returns `{ liked, likes_sent_today }` — `liked` is false when the caller had
+ *   already liked `targetId` (no new row, no increment).
+ */
+export declare function recordLike(callerId: string, targetId: string, q?: QueryFn): Promise<LikeResult>;

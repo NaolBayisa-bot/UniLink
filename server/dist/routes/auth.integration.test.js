@@ -58,13 +58,13 @@ function signInitData(fields) {
             });
             // Task 24: only the public shape is readable.
             app.get('/profiles/:id', jwt_auth_1.default, async (req, res) => {
-                const profile = await (0, users_1.getPublicProfile)(req.params.id);
+                const profile = await (0, users_1.getPublicProfile)(String(req.params.id));
                 res.json(profile);
             });
             // Task 24: identity fields only revealed on an active match (else 403).
             app.get('/reveal/:targetId', jwt_auth_1.default, async (req, res) => {
                 try {
-                    const revealed = await (0, users_1.getRevealedProfile)(req.userId, req.params.targetId);
+                    const revealed = await (0, users_1.getRevealedProfile)(req.userId, String(req.params.targetId));
                     res.json(revealed);
                 }
                 catch (err) {

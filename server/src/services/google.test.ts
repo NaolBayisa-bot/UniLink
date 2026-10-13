@@ -16,7 +16,7 @@ function ticketReturning(payload: TokenPayload | undefined) {
 }
 
 /** Mock the real OAuth2Client.prototype.verifyIdToken to run the given impl. */
-function mockVerifyIdToken(impl: (opts: unknown) => unknown): void {
+function mockVerifyIdToken(impl: (opts: { audience?: string }) => unknown): void {
   mock.method(OAuth2Client.prototype, 'verifyIdToken', impl as never);
 }
 

@@ -191,6 +191,32 @@ function trackQuery() {
         // Moderation state is not a parameter either: still exactly ONE parameter.
         strict_1.default.deepEqual(calls[0].params, [USER_A]);
     });
+    (0, node_test_1.it)('ORDERS by shared-keyword count DESC, then created_at DESC, and LIMITs to 20', async () => {
+        const { q, calls } = trackQuery();
+        await (0, users_1.browseProfiles)(USER_A, q);
+        const sql = calls[0].text;
+        // A correlated shared-keyword-count subquery: COUNT over a self-join of
+        // user_keywords pairing the caller's keywords ($1) with the candidate's
+        // (users.id) on a shared keyword_id. Tolerates the inline SQL comments.
+        strict_1.default.match(sql, /ORDER\s+BY\s*\(\s*(?:--[^\n]*\n\s*)*SELECT\s+COUNT\(\*\)\s+FROM\s+user_keywords\s+AS\s+caller_kw\s+JOIN\s+user_keywords\s+AS\s+cand_kw\s+ON\s+cand_kw\.keyword_id\s*=\s*caller_kw\.keyword_id\s+WHERE\s+caller_kw\.user_id\s*=\s*\$1::uuid\s+AND\s+cand_kw\.user_id\s*=\s*users\.id\s*\)\s+DESC,\s*created_at\s+DESC/i);
+        // The feed is capped at the top 20 ranked candidates.
+        strict_1.default.match(sql, /LIMIT\s+20\s*$/i);
+        // The ranking is derived entirely from the caller id — STILL exactly ONE
+        // parameter, so no request field (forged gender/id) can widen scoring.
+        strict_1.default.deepEqual(calls[0].params, [USER_A]);
+    });
+    (0, node_test_1.it)('does NOT expose the score in the SELECT list (public-field set only)', async () => {
+        const { q, calls } = trackQuery();
+        await (0, users_1.browseProfiles)(USER_A, q);
+        const sql = calls[0].text;
+        // `score` is an ordering-only key: the SELECT list is just the public
+        // columns (no score / count alias leaks to the client).
+        const selectList = sql.split(/FROM\s+users/i)[0];
+        strict_1.default.ok(!/\bscore\b/i.test(selectList), 'score must not appear in the SELECT list');
+        strict_1.default.ok(!/COUNT\(/i.test(selectList), 'the scoring subquery must not be in the SELECT list');
+        // And the free-text field is never joined into the scoring query.
+        strict_1.default.ok(!/custom_interest_text\b.*JOIN|JOIN.*custom_interest_text/i.test(sql));
+    });
 });
 // Read-only integration check: gender cannot be changed by a normal profile
 // update against the real Task-20 seeded user.
@@ -232,61 +258,61 @@ function trackQuery() {
             }
         });
     });
-    (0, node_test_1.describe)('upsertUserByTelegram', () => {
-        const input = {
-            telegram_id: 1001,
+});
+(0, node_test_1.describe)('upsertUserByTelegram', () => {
+    const input = {
+        telegram_id: 1001,
+        telegram_username: 'testuser_a',
+        email: 'user@example.com',
+        email_verified: true,
+    };
+    (0, node_test_1.it)('returns the upserted row with the user id and telegram_id', async () => {
+        const row = {
+            id: USER_A,
+            telegram_id: '1001',
             telegram_username: 'testuser_a',
             email: 'user@example.com',
             email_verified: true,
+            nickname: null,
+            gender: null,
+            photo_public_id: null,
+            custom_interest_text: null,
+            status: 'active',
+            created_at: new Date('2026-01-01T00:00:00Z'),
         };
-        (0, node_test_1.it)('returns the upserted row with the user id and telegram_id', async () => {
-            const row = {
-                id: USER_A,
-                telegram_id: '1001',
-                telegram_username: 'testuser_a',
-                email: 'user@example.com',
-                email_verified: true,
-                nickname: null,
-                gender: null,
-                photo_public_id: null,
-                custom_interest_text: null,
-                status: 'active',
-                created_at: new Date('2026-01-01T00:00:00Z'),
-            };
-            const q = async () => ({ rows: [row], rowCount: 1 });
-            const result = await (0, users_1.upsertUserByTelegram)(input, q);
-            strict_1.default.equal(result?.id, USER_A);
-            strict_1.default.equal(result?.telegram_id, '1001');
-        });
-        (0, node_test_1.it)('uses ON CONFLICT (telegram_id) and passes params in order', async () => {
-            const { calls } = trackQuery();
-            const q = async (text, params) => {
-                calls.push({ text, params });
-                return { rows: [], rowCount: 1 };
-            };
-            await (0, users_1.upsertUserByTelegram)(input, q);
-            const sql = calls[0].text;
-            strict_1.default.match(sql, /INSERT INTO users\s*\([^)]*telegram_id[^)]*\)/i);
-            strict_1.default.match(sql, /ON CONFLICT \(telegram_id\) DO UPDATE/i);
-            // $1::bigint first, then the other verified values in order.
-            strict_1.default.deepEqual(calls[0].params, [1001, 'testuser_a', 'user@example.com', true]);
-        });
-        (0, node_test_1.it)('does not overwrite stored email on an existing owner (only refreshes username)', async () => {
-            const { calls } = trackQuery();
-            const q = async (text, params) => {
-                calls.push({ text, params });
-                return { rows: [], rowCount: 1 };
-            };
-            await (0, users_1.upsertUserByTelegram)(input, q);
-            const sql = calls[0].text;
-            strict_1.default.match(sql, /SET\s+telegram_username\s*=\s*EXCLUDED\.telegram_username/i);
-            // email must NOT be in the DO UPDATE SET clause.
-            strict_1.default.ok(!/SET[^)]*email\s*=/i.test(sql), 'email must not be overwritten on conflict');
-        });
-        (0, node_test_1.it)('returns null when no row is returned', async () => {
-            const q = async () => ({ rows: [], rowCount: 0 });
-            strict_1.default.equal(await (0, users_1.upsertUserByTelegram)(input, q), null);
-        });
+        const q = async () => ({ rows: [row], rowCount: 1 });
+        const result = await (0, users_1.upsertUserByTelegram)(input, q);
+        strict_1.default.equal(result?.id, USER_A);
+        strict_1.default.equal(result?.telegram_id, '1001');
+    });
+    (0, node_test_1.it)('uses ON CONFLICT (telegram_id) and passes params in order', async () => {
+        const { calls } = trackQuery();
+        const q = async (text, params) => {
+            calls.push({ text, params });
+            return { rows: [], rowCount: 1 };
+        };
+        await (0, users_1.upsertUserByTelegram)(input, q);
+        const sql = calls[0].text;
+        strict_1.default.match(sql, /INSERT INTO users\s*\([^)]*telegram_id[^)]*\)/i);
+        strict_1.default.match(sql, /ON CONFLICT \(telegram_id\) DO UPDATE/i);
+        // $1::bigint first, then the other verified values in order.
+        strict_1.default.deepEqual(calls[0].params, [1001, 'testuser_a', 'user@example.com', true]);
+    });
+    (0, node_test_1.it)('does not overwrite stored email on an existing owner (only refreshes username)', async () => {
+        const { calls } = trackQuery();
+        const q = async (text, params) => {
+            calls.push({ text, params });
+            return { rows: [], rowCount: 1 };
+        };
+        await (0, users_1.upsertUserByTelegram)(input, q);
+        const sql = calls[0].text;
+        strict_1.default.match(sql, /SET\s+telegram_username\s*=\s*EXCLUDED\.telegram_username/i);
+        // email must NOT be in the DO UPDATE SET clause.
+        strict_1.default.ok(!/SET[^)]*email\s*=/i.test(sql), 'email must not be overwritten on conflict');
+    });
+    (0, node_test_1.it)('returns null when no row is returned', async () => {
+        const q = async () => ({ rows: [], rowCount: 0 });
+        strict_1.default.equal(await (0, users_1.upsertUserByTelegram)(input, q), null);
     });
 });
 // ---------------------------------------------------------------------------
@@ -403,6 +429,108 @@ async function inFeed(candidateId) {
         }
         finally {
             await cleanupTempCandidate(tempId);
+        }
+    });
+});
+// ---------------------------------------------------------------------------
+// Task 39 — browse RANKING by shared-keyword count.
+//
+// These tests run entirely inside ONE transaction that is ALWAYS rolled back,
+// and pass a transaction-bound `q` into browseProfiles so the SELECT sees the
+// uncommitted caller/candidate rows. Nothing is ever committed, so the seeded
+// DB is left byte-for-byte unchanged and no other test can observe this data.
+//
+// A fresh male caller is used (not the seeded UserA) so the fixture is fully
+// self-contained: female candidates are inserted with KNOWN, DIFFERING
+// shared-keyword overlaps against the caller and the feed is filtered to just
+// those ids before asserting their order.
+// ---------------------------------------------------------------------------
+(0, node_test_1.describe)('browseProfiles ranking by shared-keyword count (live DB, rolled-back tx)', () => {
+    (0, node_test_1.it)('orders three candidates of differing overlap by shared-keyword count DESC (3, then 1, then 0)', async () => {
+        const client = await pool_1.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const q = (text, params) => client.query(text, params);
+            // A pool of REAL keyword ids (FK target). 64 are seeded, so this succeeds.
+            const kw = await client.query('SELECT id FROM keywords ORDER BY id LIMIT 7');
+            strict_1.default.ok(kw.rows.length >= 7, 'need at least 7 seeded keywords to build the fixture');
+            const [k0, k1, k2, k3, k4, k5, k6] = kw.rows.map((r) => r.id);
+            // Insert a fresh male caller holding keywords k0..k4.
+            const callerRes = await client.query(`INSERT INTO users (telegram_id, nickname, gender, status, created_at)
+         VALUES (998101::bigint, 'ScoreCaller', 'male', 'active', '2026-01-01'::timestamptz)
+         RETURNING id`);
+            const callerId = callerRes.rows[0].id;
+            await client.query(`INSERT INTO user_keywords (user_id, keyword_id)
+         SELECT $1::uuid, unnest($2::int[])`, [callerId, [k0, k1, k2, k3, k4]]);
+            // Helper: insert a female candidate with the given shared keywords and
+            // created_at, and return its id.
+            async function addCandidate(telegramId, sharedKeywordIds, createdAt) {
+                const res = await client.query(`INSERT INTO users (telegram_id, nickname, gender, status, created_at)
+           VALUES ($1::bigint, 'RankCand', 'female', 'active', $2::timestamptz)
+           RETURNING id`, [telegramId, createdAt]);
+                const id = res.rows[0].id;
+                if (sharedKeywordIds.length > 0) {
+                    await client.query(`INSERT INTO user_keywords (user_id, keyword_id)
+             SELECT $1::uuid, unnest($2::int[])`, [id, sharedKeywordIds]);
+                }
+                return id;
+            }
+            // Overlaps with the caller {k0..k4}: High=3, Mid=1, Low=0 (disjoint).
+            const highId = await addCandidate(998102, [k0, k1, k2], '2026-02-01');
+            const midId = await addCandidate(998103, [k0], '2026-03-01');
+            const lowId = await addCandidate(998104, [k5, k6], '2026-04-01');
+            const feed = await (0, users_1.browseProfiles)(callerId, q);
+            const presentIds = new Set(feed.map((r) => r.id));
+            // All three must be present (different gender, active, not excluded).
+            strict_1.default.ok(presentIds.has(highId) && presentIds.has(midId) && presentIds.has(lowId), 'all three candidates must be browsable');
+            // Filter the feed to ONLY our three candidates, then confirm the order.
+            const order = feed
+                .map((r) => r.id)
+                .filter((id) => id === highId || id === midId || id === lowId);
+            strict_1.default.deepEqual(order, [highId, midId, lowId], 'feed must be ordered by shared-keyword count DESC: 3-overlap, then 1-overlap, then 0-overlap');
+            // The 0-overlap candidate is still returned (score 0 fails CLOSED, not filtered).
+            strict_1.default.ok(presentIds.has(lowId), 'a zero-overlap candidate must still appear, ordered last by score');
+        }
+        finally {
+            await client.query('ROLLBACK').catch(() => undefined);
+            client.release();
+        }
+    });
+    (0, node_test_1.it)('breaks a shared-keyword-count TIE by created_at DESC (newer candidate first)', async () => {
+        const client = await pool_1.pool.connect();
+        try {
+            await client.query('BEGIN');
+            const q = (text, params) => client.query(text, params);
+            const kw = await client.query('SELECT id FROM keywords ORDER BY id LIMIT 4');
+            strict_1.default.ok(kw.rows.length >= 4, 'need at least 4 seeded keywords to build the fixture');
+            const [k0, k1, k2, k3] = kw.rows.map((r) => r.id);
+            const callerRes = await client.query(`INSERT INTO users (telegram_id, nickname, gender, status, created_at)
+         VALUES (998201::bigint, 'TieCaller', 'male', 'active', '2026-01-01'::timestamptz)
+         RETURNING id`);
+            const callerId = callerRes.rows[0].id;
+            await client.query(`INSERT INTO user_keywords (user_id, keyword_id)
+         SELECT $1::uuid, unnest($2::int[])`, [callerId, [k0, k1, k2, k3]]);
+            // Two candidates sharing the SAME two keywords -> equal score of 2, but
+            // with different created_at so the created_at DESC tie-break decides order.
+            const insert = await client.query(`INSERT INTO users (telegram_id, nickname, gender, status, created_at)
+         VALUES (998202::bigint, 'TieOld', 'female', 'active', '2026-01-05'::timestamptz),
+                (998203::bigint, 'TieNew', 'female', 'active', '2026-07-05'::timestamptz)
+         RETURNING id, nickname`);
+            const rows = insert.rows;
+            const oldId = rows.find((r) => r.nickname === 'TieOld').id;
+            const newId = rows.find((r) => r.nickname === 'TieNew').id;
+            for (const id of [oldId, newId]) {
+                await client.query(`INSERT INTO user_keywords (user_id, keyword_id)
+           SELECT $1::uuid, unnest($2::int[])`, [id, [k0, k1]]);
+            }
+            const feed = await (0, users_1.browseProfiles)(callerId, q);
+            const order = feed.map((r) => r.id).filter((id) => id === oldId || id === newId);
+            // Equal score (2 shared) -> the NEWER created_at sorts first.
+            strict_1.default.deepEqual(order, [newId, oldId], 'with equal shared-keyword count, the newer created_at must sort first');
+        }
+        finally {
+            await client.query('ROLLBACK').catch(() => undefined);
+            client.release();
         }
     });
 });

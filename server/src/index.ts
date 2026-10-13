@@ -7,6 +7,7 @@ import { authRouter } from './routes/auth';
 import { profileRouter } from './routes/profile';
 import { photoRouter } from './routes/photo';
 import { browseRouter } from './routes/browse';
+import { likeRouter } from './routes/like';
 import jwtAuth from './middleware/jwt-auth';
 
 const app = express();
@@ -41,6 +42,11 @@ app.use('/photo', jwtAuth, photoRouter);
 // caller's identity and their gender come from req.userId (the single source of
 // truth for identity); request bodies/queries are never consulted.
 app.use('/browse', jwtAuth, browseRouter);
+
+// POST /like/:targetId — record that the caller likes the target, enforcing the
+// daily like cap (reset at UTC midnight, 429 over cap). Identity comes only from
+// req.userId (jwtAuth); only the :targetId path param is client-supplied.
+app.use('/like', jwtAuth, likeRouter);
 
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);

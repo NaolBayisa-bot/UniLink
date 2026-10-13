@@ -67,14 +67,14 @@ describe('integration: POST /auth/complete-signup end-to-end', () => {
 
     // Task 24: only the public shape is readable.
     app.get('/profiles/:id', jwtAuth, async (req, res) => {
-      const profile = await getPublicProfile(req.params.id);
+      const profile = await getPublicProfile(String(req.params.id));
       res.json(profile);
     });
 
     // Task 24: identity fields only revealed on an active match (else 403).
     app.get('/reveal/:targetId', jwtAuth, async (req, res) => {
       try {
-        const revealed = await getRevealedProfile(req.userId!, req.params.targetId);
+        const revealed = await getRevealedProfile(req.userId!, String(req.params.targetId));
         res.json(revealed);
       } catch (err) {
         if (err instanceof HttpError) {

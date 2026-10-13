@@ -19,6 +19,7 @@ function makeUser(overrides: Partial<OwnUserRow> = {}): OwnUserRow {
     gender: 'male',
     photo_public_id: null,
     custom_interest_text: null,
+    prompts: null,
     status: 'active',
     created_at: new Date('2026-01-01T00:00:00Z'),
     ...overrides,

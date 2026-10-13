@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.DAILY_LIKE_LIMIT = void 0;
 exports.getPublicProfile = getPublicProfile;
 exports.getRevealedProfile = getRevealedProfile;
 exports.browseProfiles = browseProfiles;
@@ -8,6 +9,8 @@ exports.adminCorrectGender = adminCorrectGender;
 exports.upsertUserByTelegram = upsertUserByTelegram;
 exports.validateKeywordIds = validateKeywordIds;
 exports.replaceUserKeywords = replaceUserKeywords;
+exports.needsDailyReset = needsDailyReset;
+exports.recordLike = recordLike;
 const authorization_1 = require("../middleware/authorization");
 const query_1 = require("./query");
 const pool_1 = require("./pool");
@@ -86,6 +89,27 @@ const PASS_EXCLUSION_WINDOW_DAYS = 15;
  * The scalar subquery also fails CLOSED: if the caller's row is missing or their
  * gender is still NULL, the subquery yields NULL and `gender <> NULL` matches no
  * rows (an empty feed) rather than everyone.
+ *
+ * RANKING (Task 39 — shared-keyword scoring): candidates are ordered by the
+ * number of keywords they share with the caller, highest first, then by recency
+ * (created_at DESC). The shared-keyword count is a correlated scalar subquery:
+ * a self-join of `user_keywords` pairing the caller's keyword rows with each
+ * candidate's keyword rows on a common keyword_id, counting the matches.
+ *
+ * SECURITY / PRIVACY INVARIANTS preserved by the ranking:
+ * - The score is computed ONLY from the caller-scoped `user_keywords` join
+ *   (caller identified by $1) — it introduces NO new parameter, so the query
+ *   still takes exactly ONE argument (the caller id) and a forged gender/id in
+ *   the request cannot influence ranking.
+ * - The user-supplied free text `custom_interest_text` is NEVER joined into (or
+ *   read by) this scoring query — only the shared keyword set is.
+ * - `score` is a DISPLAY-ONLY ordering key: it is used solely in ORDER BY and is
+ *   NOT added to the SELECT list, so the response stays the Task-22 public-field
+ *   set only (no score leaks to the client).
+ * - A candidate sharing zero keywords scores 0 (COUNT over an empty join) and
+ *   simply sorts last by score, falling back to recency — it still fails CLOSED.
+ *
+ * LIMIT 20 caps the feed at the 20 best-ranked candidates.
  */
 async function browseProfiles(callerId, q = query_1.query) {
     const { rows } = await q(`SELECT ${PUBLIC_PROFILE_COLUMNS}
@@ -109,7 +133,18 @@ async function browseProfiles(callerId, q = query_1.query) {
               SELECT 1 FROM reports
                WHERE ${(0, authorization_1.openReportAgainstPredicate)('users.id')}
             )
-      ORDER BY created_at DESC`, [callerId]);
+      ORDER BY (
+              -- Shared-keyword count: how many keyword_ids the caller ($1) and
+              -- this candidate (users.id) BOTH hold. Zero for no overlap.
+              SELECT COUNT(*)
+                FROM user_keywords AS caller_kw
+                JOIN user_keywords AS cand_kw
+                  ON cand_kw.keyword_id = caller_kw.keyword_id
+               WHERE caller_kw.user_id = $1::uuid
+                 AND cand_kw.user_id = users.id
+            ) DESC,
+            created_at DESC
+      LIMIT 20`, [callerId]);
     return rows;
 }
 /**
@@ -255,5 +290,83 @@ async function replaceUserKeywords(userId, keywordIds, pgPool = pool_1.pool) {
     finally {
         client.release();
     }
+}
+/**
+ * The maximum number of likes a user may send within a single UTC day. When a
+ * caller is at this count, further like attempts return 429 until the daily
+ * counter resets at the next UTC midnight.
+ */
+exports.DAILY_LIKE_LIMIT = 30;
+/**
+ * True when `lastResetAt` is strictly BEFORE the UTC midnight that begins
+ * `now`'s day — i.e. the daily like counter is stale and must be reset.
+ *
+ * The comparison is against today's UTC midnight (00:00:00Z). A `lastResetAt`
+ * exactly at midnight is NOT before it, so a user whose counter was reset at
+ * the boundary keeps their count until the next day.
+ */
+function needsDailyReset(lastResetAt, now) {
+    const utcMidnight = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+    return lastResetAt.getTime() < utcMidnight;
+}
+/**
+ * Record that `callerId` likes `targetId`, enforcing the daily like cap.
+ *
+ * On every call:
+ * 1. Read the caller's `likes_sent_today` and `likes_reset_at` from their OWN
+ *    row (identified by $1 = the authenticated caller). A missing row throws
+ *    404 — it fails CLOSED rather than granting a fresh allowance.
+ * 2. If `likes_reset_at` is before today's UTC midnight, the daily window has
+ *    rolled over: reset `likes_sent_today = 0` and bump `likes_reset_at = now()`.
+ *    The in-memory count is treated as 0 for the rest of this call.
+ * 3. If the (possibly just-reset) count is >= DAILY_LIKE_LIMIT (30), throw
+ *    HttpError(429) — the caller is over cap for today.
+ * 4. Otherwise insert the like (ON CONFLICT DO NOTHING, so re-liking the same
+ *    target is idempotent) and, ONLY when a new row was actually written,
+ *    increment `likes_sent_today` by 1. A duplicate like therefore never burns
+ *    the daily allowance.
+ *
+ * SECURITY INVARIANT: the identity comes only from `callerId` (the caller's own
+ * row). Nothing about the reset window, the cap, or the counter is accepted as
+ * an argument, so no request field can widen the cap or dodge the reset.
+ *
+ * @returns `{ liked, likes_sent_today }` — `liked` is false when the caller had
+ *   already liked `targetId` (no new row, no increment).
+ */
+async function recordLike(callerId, targetId, q = query_1.query) {
+    // 1. Read the caller's own daily-like state.
+    const { rows } = await q(`SELECT likes_sent_today, likes_reset_at
+       FROM users
+      WHERE id = $1::uuid`, [callerId]);
+    if (rows.length === 0) {
+        // The caller row is gone — fail CLOSED (no fresh allowance granted).
+        throw new authorization_1.HttpError(404, 'User not found');
+    }
+    const state = rows[0];
+    // 2. Roll the daily window over when it has passed UTC midnight.
+    let sentToday = Number(state.likes_sent_today);
+    if (needsDailyReset(new Date(state.likes_reset_at), new Date())) {
+        await q(`UPDATE users
+          SET likes_sent_today = 0,
+              likes_reset_at = now()
+        WHERE id = $1::uuid`, [callerId]);
+        sentToday = 0;
+    }
+    // 3. Enforce the daily cap.
+    if (sentToday >= exports.DAILY_LIKE_LIMIT) {
+        throw new authorization_1.HttpError(429, `Daily like limit of ${exports.DAILY_LIKE_LIMIT} reached`);
+    }
+    // 4. Record the like; only a NEW row consumes the daily allowance.
+    const insert = await q(`INSERT INTO likes (from_user_id, to_user_id)
+     VALUES ($1::uuid, $2::uuid)
+     ON CONFLICT (from_user_id, to_user_id) DO NOTHING`, [callerId, targetId]);
+    const liked = (insert.rowCount ?? 0) > 0;
+    if (liked) {
+        await q(`UPDATE users
+          SET likes_sent_today = likes_sent_today + 1
+        WHERE id = $1::uuid`, [callerId]);
+        sentToday += 1;
+    }
+    return { liked, likes_sent_today: sentToday };
 }
 //# sourceMappingURL=users.js.map

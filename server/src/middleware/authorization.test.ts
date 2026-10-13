@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { Request } from 'express';
-import { QueryResult } from 'pg';
+import { QueryResult, QueryResultRow } from 'pg';
 import {
   assertIsSelf,
   blockedPairPredicate,
@@ -18,7 +18,7 @@ const USER_A = 'c074b9cb-48f0-4900-9040-2718ad82ce55';
 const USER_B = 'b6084c09-cfed-4294-811a-7c3fbc1c1d9a';
 
 /** Build a fake QueryResult with the given rows. */
-function result<T>(rows: T[] = []): QueryResult<T> {
+function result<T extends QueryResultRow>(rows: T[] = []): QueryResult<T> {
   return {
     rows,
     command: 'SELECT',

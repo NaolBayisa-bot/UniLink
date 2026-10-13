@@ -27,14 +27,6 @@ export class HttpError extends Error {
   }
 }
 
-interface MatchRow {
-  id: string;
-}
-
-interface ScalarRow {
-  zero: '0';
-}
-
 /**
  * Enforce that the authenticated caller (`req.userId`) is the same entity as
  * `targetId`. The caller's identity MUST come from req.userId — never from a
@@ -58,7 +50,7 @@ export async function matchExistsBetween(
   userB: string,
   q: QueryFn = query,
 ): Promise<boolean> {
-  const row = await q<MatchRow>(
+  const row = await q(
     `SELECT id
        FROM matches
       WHERE (
@@ -105,7 +97,7 @@ export async function isBlockedPair(
   userB: string,
   q: QueryFn = query,
 ): Promise<boolean> {
-  const row = await q<ScalarRow>(
+  const row = await q(
     `SELECT 1 AS zero
        FROM blocks
       WHERE ${blockedPairPredicate('$1::uuid', '$2::uuid')}
@@ -138,7 +130,7 @@ export async function hasOpenReportAgainst(
   userId: string,
   q: QueryFn = query,
 ): Promise<boolean> {
-  const row = await q<ScalarRow>(
+  const row = await q(
     `SELECT 1 AS zero
        FROM reports
       WHERE ${openReportAgainstPredicate('$1::uuid')}

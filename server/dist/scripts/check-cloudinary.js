@@ -20,15 +20,15 @@ async function checkCloudinary() {
         console.error(`❌ Missing in .env: ${missing.join(', ')}`);
         process.exit(1);
     }
-    cloudinary_1.default.config({
+    cloudinary_1.default.v2.config({
         cloud_name: cloudName,
         api_key: apiKey,
         api_secret: apiSecret,
     });
     try {
-        const ping = await cloudinary_1.default.api.ping();
+        const ping = await cloudinary_1.default.v2.api.ping();
         console.log(`✅ Cloudinary ping ok — status: ${ping.status} (cloud: ${cloudName})`);
-        const usage = await cloudinary_1.default.api.usage();
+        const usage = await cloudinary_1.default.v2.api.usage();
         console.log(`   Plan: ${usage.plan}`);
         console.log(`   Credits: ${usage.credits_usage?.credits_usage ?? 'n/a'} / ${usage.credits_usage?.credits_limit ?? 'n/a'} used`);
     }
