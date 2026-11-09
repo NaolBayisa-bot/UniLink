@@ -23,7 +23,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
  * Records that the authenticated caller likes `targetId`, enforcing the daily
  * like cap (DAILY_LIKE_LIMIT). The full reset/cap logic lives in `recordLike`:
  * on each call it rolls the daily window over at UTC midnight, returns 429 when
- * the caller is over cap, and only counts NEW likes against the allowance.
+ * the caller is over cap, and only counts NEW likes against the allowance. A
+ * new like also attempts to insert a `matches` row (unordered pair); a unique
+ * violation there ("match already exists") is swallowed and still yields a 201.
  *
  * SECURITY INVARIANT (identity): the caller comes ONLY from req.userId (set by
  * jwtAuth) and is the sole argument passed to the data layer. req.body,

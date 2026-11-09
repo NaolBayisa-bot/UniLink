@@ -22,6 +22,8 @@ interface State {
   insertRowCount?: number;
   /** When true the caller's row is missing (SELECT returns no rows). */
   noCaller?: boolean;
+  /** When set, the matches INSERT throws this error (e.g. { code: '23505' }). */
+  matchInsertError?: { code: string };
 }
 
 /**
@@ -54,6 +56,11 @@ function makeFakeQ(state: State, log: string[]): QueryFn {
     }
     if (/likes_sent_today \+ 1/i.test(text)) {
       log.push('increment');
+      return { rows: [], rowCount: 1 };
+    }
+    if (/INSERT INTO matches/i.test(text)) {
+      log.push('match-insert');
+      if (state.matchInsertError) throw state.matchInsertError;
       return { rows: [], rowCount: 1 };
     }
     return { rows: [], rowCount: 0 };
@@ -111,8 +118,8 @@ describe('POST /like/:targetId — daily like cap', () => {
 
     assert.equal(status, 201);
     assert.deepEqual(body, { liked: true, likes_sent_today: 6 });
-    // No reset (window is current), then insert + increment.
-    assert.deepEqual(log, ['select', 'insert', 'increment']);
+    // No reset (window is current), then insert + increment + match insert.
+    assert.deepEqual(log, ['select', 'insert', 'increment', 'match-insert']);
   });
 
   it('AT CAP: 429 and the like is NOT inserted (no allowance burned)', async () => {
@@ -137,7 +144,7 @@ describe('POST /like/:targetId — daily like cap', () => {
     assert.equal(status, 201);
     assert.deepEqual(body, { liked: true, likes_sent_today: 1 });
     // Reset runs FIRST (counter -> 0), so the fresh like is allowed and counts.
-    assert.deepEqual(log, ['select', 'reset', 'insert', 'increment']);
+    assert.deepEqual(log, ['select', 'reset', 'insert', 'increment', 'match-insert']);
   });
 
   it('DUPLICATE like (conflict) is idempotent and does NOT burn the daily allowance', async () => {
@@ -147,7 +154,7 @@ describe('POST /like/:targetId — daily like cap', () => {
 
     assert.equal(status, 201);
     assert.deepEqual(body, { liked: false, likes_sent_today: 5 });
-    // Insert attempted, but no increment because no new row was written.
+    // Insert attempted (no increment); no new like so no match insert either.
     assert.deepEqual(log, ['select', 'insert']);
   });
 
@@ -207,6 +214,41 @@ describe('POST /like/:targetId — daily like cap', () => {
     await handler(req, res, () => undefined);
     assert.equal(status, 500);
     assert.deepEqual(body, { error: 'Failed to record like' });
+  });
+
+  it('23505 on the matches insert ("match already exists") is still a 201 success', async () => {
+    const { status, body, log } = await run({
+      state: {
+        likes_sent_today: 5,
+        likes_reset_at: new Date(),
+        matchInsertError: { code: '23505' },
+      },
+    });
+
+    assert.equal(status, 201);
+    assert.deepEqual(body, { liked: true, likes_sent_today: 6 });
+    // The like + increment ran, then the matches insert hit 23505 and was swallowed.
+    assert.deepEqual(log, [
+      'select',
+      'insert',
+      'increment',
+      'match-insert',
+    ]);
+  });
+
+  it('a non-23505 error on the matches insert propagates to a 500', async () => {
+    const { status, body, log } = await run({
+      state: {
+        likes_sent_today: 5,
+        likes_reset_at: new Date(),
+        matchInsertError: { code: '42P01' },
+      },
+    });
+
+    assert.equal(status, 500);
+    assert.deepEqual(body, { error: 'Failed to record like' });
+    // Like + increment ran before the matches insert failed with an unrelated code.
+    assert.deepEqual(log, ['select', 'insert', 'increment', 'match-insert']);
   });
 });
 

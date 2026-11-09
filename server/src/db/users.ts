@@ -515,6 +515,24 @@ export async function recordLike(
       [callerId],
     );
     sentToday += 1;
+
+    // 5. Attempt to form a match. The pair index matches_unique_pair is
+    //    order-independent (least/greatest), so A->B and B->A collide on the
+    //    same key. A unique_violation (23505) means the match already exists
+    //    — that is still a success (fall through). Any other error code
+    //    propagates to the route handler (-> 500).
+    try {
+      await q(
+        `INSERT INTO matches (user_a_id, user_b_id, matched_at)
+         VALUES (LEAST($1::uuid, $2::uuid), GREATEST($1::uuid, $2::uuid), now())`,
+        [callerId, targetId],
+      );
+    } catch (err: unknown) {
+      const pgErr = err as { code?: string };
+      if (pgErr.code !== '23505') {
+        throw err;
+      }
+    }
   }
 
   return { liked, likes_sent_today: sentToday };
