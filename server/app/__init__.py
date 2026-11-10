@@ -10,6 +10,8 @@ from flask import Flask
 from flask_cors import CORS
 
 from app.config import Config
+from app.routes.auth import auth as auth_blueprint
+from app.routes.profile import profile
 from app.routes.health import health
 
 
@@ -58,6 +60,8 @@ def create_app(test_config=None):
     init_pool(app.config["DATABASE_URL"])
 
     # Register blueprints.
+    app.register_blueprint(auth_blueprint)
+    app.register_blueprint(profile)
     app.register_blueprint(health)
 
     return app
