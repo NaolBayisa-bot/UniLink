@@ -13,9 +13,9 @@ from flask import Blueprint, jsonify, g, request
 
 from app.auth.authorization import MatchNotFoundError, get_active_match_for_user
 from app.auth.decorators import require_auth
-from app.db.query import execute, fetch_all, fetch_one
+from app.db.query import execute, fetch_all, fetch_one, transaction
 from app.db.users import get_revealed_profile
-from app.db.users import get_revealed_profile
+from app.db.matches import unmatch_pair
 
 match = Blueprint("match", __name__)
 
@@ -206,3 +206,42 @@ def share_contact(match_id):
     return jsonify(
         {"i_shared_contact": True, "they_shared_contact": bool(they_shared)}
     ), 200
+
+
+@match.post("/unmatch")
+@require_auth
+def unmatch():
+    """End an active match between the caller and the other participant.
+
+    Body: {"match_id": "<uuid>"}.
+
+    Loads the match with get_active_match_for_user (404 if not a participant
+    or not active), then calls unmatch_pair inside a transaction to end the
+    match, delete likes in both directions, and delete reveal_consents.
+    Responds 204 on success.
+    """
+    body = request.get_json(silent=True) or {}
+    match_id_raw = body.get("match_id")
+
+    # Validate match_id is a UUID.
+    try:
+        match_id = str(UUID(str(match_id_raw)))
+    except (AttributeError, TypeError, ValueError):
+        return jsonify({"error": "invalid_input"}), 400
+
+    me = str(g.user_id)
+
+    # Verify the caller participates in an active match.
+    try:
+        match = get_active_match_for_user(match_id, me)
+    except MatchNotFoundError:
+        return jsonify({"error": "not_found"}), 404
+
+    user_a = str(match["user_a_id"])
+    user_b = str(match["user_b_id"])
+
+    with transaction() as conn:
+        unmatch_pair(conn, user_a, user_b)
+
+    # 204 No Content - nothing to return.
+    return "", 204
