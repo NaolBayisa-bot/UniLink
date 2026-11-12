@@ -7,10 +7,14 @@ matches. Everything is computed in a single SQL query so there is no N+1
 problem, even when the caller has many matches.
 """
 
+from uuid import UUID
+
 from flask import Blueprint, jsonify, g
 
+from app.auth.authorization import MatchNotFoundError, get_active_match_for_user
 from app.auth.decorators import require_auth
-from app.db.query import fetch_all
+from app.db.query import fetch_all, fetch_one
+from app.db.users import get_revealed_profile
 
 match = Blueprint("match", __name__)
 
@@ -66,3 +70,81 @@ def list_matches():
             for row in rows
         ]
     ), 200
+
+
+@match.get("/match/<match_id>/profile")
+@require_auth
+def match_profile(match_id):
+    """Return the revealed profile of the other participant in a match.
+
+    The caller must be a participant in an active match. Returns 404
+    {'error': 'not_found'} for a nonexistent match, an unmatched match, or a
+    match the caller is not part of -- all indistinguishable.
+
+    Response always includes nickname, gender, real_name, department and
+    i_shared_contact. The other user's telegram_username is included only
+    when BOTH participants have consented AND the other user has one set.
+    telegram_id is never exposed.
+    """
+    # Validate match_id is a UUID.
+    try:
+        UUID(str(match_id))
+    except (AttributeError, TypeError, ValueError):
+        return jsonify({"error": "invalid_input"}), 400
+
+    me = str(g.user_id)
+
+    # Verify the caller participates in an active match.
+    try:
+        match = get_active_match_for_user(match_id, me)
+    except MatchNotFoundError:
+        return jsonify({"error": "not_found"}), 404
+
+    # Reveal the other participant's profile fields (never their telegram_id).
+    profile = get_revealed_profile(match, me)
+    if profile is None:
+        return jsonify({"error": "not_found"}), 404
+
+    # Determine the other participant's id and telegram_username.
+    other_id = (
+        match["user_b_id"]
+        if str(match["user_a_id"]) == str(me)
+        else match["user_a_id"]
+    )
+    other_row = fetch_one(
+        "SELECT telegram_username FROM users WHERE id = %s::uuid",
+        (other_id,),
+    )
+    other_telegram_username = (
+        other_row["telegram_username"] if other_row else None
+    )
+
+    # Has the caller consented?
+    i_shared = fetch_one(
+        """
+        SELECT 1 FROM reveal_consents
+        WHERE match_id = %s::uuid AND user_id = %s::uuid
+        """,
+        (match_id, me),
+    ) is not None
+    profile["i_shared_contact"] = bool(i_shared)
+
+    # Contact rule: telegram_username is included only when BOTH have
+    # consented and the other user actually has a Telegram username.
+    they_shared = fetch_one(
+        """
+        SELECT 1 FROM reveal_consents
+        WHERE match_id = %s::uuid AND user_id = %s::uuid
+        """,
+        (match_id, other_id),
+    ) is not None
+    both_consented = i_shared and they_shared
+
+    if both_consented and other_telegram_username:
+        profile["telegram_username"] = other_telegram_username
+    elif both_consented and not other_telegram_username:
+        profile["contact_unavailable"] = True
+    else:
+        profile["has_shared_contact"] = False
+
+    return jsonify(profile), 200

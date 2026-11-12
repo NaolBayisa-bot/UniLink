@@ -90,3 +90,49 @@ def get_public_profile(user_id):
         "nickname": row["nickname"],
         "created_at": row["created_at"].isoformat() if row["created_at"] else None,
     }
+
+
+def get_revealed_profile(match, me):
+    """Return the OTHER participant's revealable profile fields.
+
+    Selects nickname, gender, real_name and department of the participant who
+    is not ``me``. Refuses (returns None) if that other user is banned or does
+    not exist, so the route can return a uniform 404.
+
+    This is part of app/db/users.py -- the ONLY module allowed to read user
+    rows for other people -- and is only reachable from a match-scoped route
+    that has already verified the caller participates in ``match``.
+
+    Args:
+        match: A match row dict (from get_active_match_for_user).
+        me: The authenticated caller's id (a string UUID).
+
+    Returns:
+        A dict with keys nickname, gender, real_name, department, or None if
+        the other participant is banned or missing.
+    """
+    from app.db.query import fetch_one
+
+    other_id = (
+        match["user_b_id"]
+        if str(match["user_a_id"]) == str(me)
+        else match["user_a_id"]
+    )
+
+    row = fetch_one(
+        """
+        SELECT nickname, gender, real_name, department
+        FROM users
+        WHERE id = %s::uuid
+          AND status = 'active'
+        """,
+        (other_id,),
+    )
+    if row is None:
+        return None
+    return {
+        "nickname": row["nickname"],
+        "gender": row["gender"],
+        "real_name": row["real_name"],
+        "department": row["department"],
+    }
