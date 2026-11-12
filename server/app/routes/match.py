@@ -9,11 +9,12 @@ problem, even when the caller has many matches.
 
 from uuid import UUID
 
-from flask import Blueprint, jsonify, g
+from flask import Blueprint, jsonify, g, request
 
 from app.auth.authorization import MatchNotFoundError, get_active_match_for_user
 from app.auth.decorators import require_auth
-from app.db.query import fetch_all, fetch_one
+from app.db.query import execute, fetch_all, fetch_one
+from app.db.users import get_revealed_profile
 from app.db.users import get_revealed_profile
 
 match = Blueprint("match", __name__)
@@ -148,3 +149,60 @@ def match_profile(match_id):
         profile["has_shared_contact"] = False
 
     return jsonify(profile), 200
+
+
+@match.post("/match/<match_id>/share-contact")
+@require_auth
+def share_contact(match_id):
+    """Record that the caller consents to share contact info in a match.
+
+    The user_id is always g.user_id -- any user_id in the request body is
+    ignored. Responds with the caller's consent flag and the other
+    participant's consent flag. Does not return the username; the client
+    fetches it from GET /match/<id>/profile once both parties consent.
+    """
+    # Validate match_id is a UUID.
+    try:
+        UUID(str(match_id))
+    except (AttributeError, TypeError, ValueError):
+        return jsonify({"error": "invalid_input"}), 400
+
+    me = str(g.user_id)
+
+    # Verify the caller participates in an active match.
+    try:
+        match = get_active_match_for_user(match_id, me)
+    except MatchNotFoundError:
+        return jsonify({"error": "not_found"}), 404
+
+    # Insert the consent (idempotent: ON CONFLICT DO NOTHING).
+    # user_id is ALWAYS g.user_id -- never from the request body.
+    execute(
+        """
+        INSERT INTO reveal_consents (match_id, user_id)
+        VALUES (%s::uuid, %s::uuid)
+        ON CONFLICT (match_id, user_id) DO NOTHING
+        """,
+        (match_id, me),
+    )
+
+    # Determine whether the other participant has consented.
+    other_id = (
+        match["user_b_id"]
+        if str(match["user_a_id"]) == str(me)
+        else match["user_a_id"]
+    )
+    they_shared = (
+        fetch_one(
+            """
+            SELECT 1 FROM reveal_consents
+            WHERE match_id = %s::uuid AND user_id = %s::uuid
+            """,
+            (match_id, other_id),
+        )
+        is not None
+    )
+
+    return jsonify(
+        {"i_shared_contact": True, "they_shared_contact": bool(they_shared)}
+    ), 200
