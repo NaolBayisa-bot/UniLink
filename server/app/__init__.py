@@ -15,6 +15,7 @@ from app.routes.profile import profile
 from app.routes.browse import browse
 from app.routes.like import like
 from app.routes.match import match
+from app.routes.safety import safety
 from app.routes.health import health
 
 
@@ -68,6 +69,7 @@ def create_app(test_config=None):
     app.register_blueprint(browse)
     app.register_blueprint(like)
     app.register_blueprint(match)
+    app.register_blueprint(safety)
     app.register_blueprint(health)
 
     return app
