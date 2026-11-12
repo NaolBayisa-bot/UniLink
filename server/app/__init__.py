@@ -12,6 +12,9 @@ from flask_cors import CORS
 from app.config import Config
 from app.routes.auth import auth as auth_blueprint
 from app.routes.profile import profile
+from app.routes.browse import browse
+from app.routes.like import like
+from app.routes.match import match
 from app.routes.health import health
 
 
@@ -62,6 +65,9 @@ def create_app(test_config=None):
     # Register blueprints.
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(profile)
+    app.register_blueprint(browse)
+    app.register_blueprint(like)
+    app.register_blueprint(match)
     app.register_blueprint(health)
 
     return app
