@@ -69,6 +69,22 @@ def app():
         from flask import g, jsonify
         return jsonify({"ok": True, "user_id": g.user_id}), 200
 
+    # Register decorator test endpoints before the app handles any request.
+    from app.auth.decorators import require_admin
+
+    @application.get("/_protected")
+    @require_auth
+    def _protected():
+        from flask import g, jsonify
+        return jsonify({"user_id": g.user_id, "status": g.user["status"]}), 200
+
+    @application.get("/_admin_only")
+    @require_auth
+    @require_admin
+    def _admin_only():
+        from flask import jsonify
+        return jsonify({"admin": True}), 200
+
     yield application
 
 

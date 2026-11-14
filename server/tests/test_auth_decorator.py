@@ -3,28 +3,10 @@
 import jwt
 import pytest
 
-from app import create_app
-from app.config import Config
-from app.auth.decorators import require_auth, require_admin
-
 
 @pytest.fixture(scope="session")
 def auth_client(app):
-    """Test client with temporary /_protected and /_admin_only routes."""
-
-    @app.get("/_protected")
-    @require_auth
-    def protected():
-        from flask import g, jsonify
-        return jsonify({"user_id": g.user_id, "status": g.user["status"]}), 200
-
-    @app.get("/_admin_only")
-    @require_auth
-    @require_admin
-    def admin_only():
-        from flask import jsonify
-        return jsonify({"admin": True}), 200
-
+    """Test client using auth endpoints registered before the first request."""
     return app.test_client()
 
 
@@ -43,6 +25,7 @@ def test_garbage_token_returns_401(auth_client):
 
 def test_expired_token_returns_401(auth_client, make_user):
     row, _ = make_user(telegram_id=111111)
+    from app.config import Config
     token = jwt.encode(
         {"sub": str(row["id"]), "iat": 1, "exp": 1},
         Config.JWT_SECRET,

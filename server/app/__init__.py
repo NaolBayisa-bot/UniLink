@@ -17,6 +17,7 @@ from app.routes.like import like
 from app.routes.match import match
 from app.routes.safety import safety
 from app.routes.health import health
+from app.routes.admin import admin
 
 
 def create_app(test_config=None):
@@ -71,5 +72,6 @@ def create_app(test_config=None):
     app.register_blueprint(match)
     app.register_blueprint(safety)
     app.register_blueprint(health)
+    app.register_blueprint(admin)
 
     return app
