@@ -1,0 +1,59 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+  font-family: 'Nunito', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: rgb(var(--color-on-background));
+  background: rgb(var(--color-background));
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  }
+
+  html,
+  body,
+  #root {
+  margin: 0;
+  min-height: 100%;
+  min-width: 100%;
+  }
+
+  html {
+    overscroll-behavior: none;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+  }
+
+  body {
+  min-height: 100vh;
+  background: rgb(var(--color-background));
+  color: rgb(var(--color-on-background));
+  -webkit-tap-highlight-color: transparent;
+  }
+
+  *,
+  *::before,
+  *::after {
+  box-sizing: border-box;
+  }
+}
+
+@layer utilities {
+  .telegram-header-space {
+    height: 56px;
+    padding-top: 56px;
+  }
+
+  .telegram-header-offset {
+    padding-top: calc(56px + var(--safe-top));
+  }
+}

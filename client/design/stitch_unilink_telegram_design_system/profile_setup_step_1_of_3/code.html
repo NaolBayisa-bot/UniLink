@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_blank" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,400;0,6..12,600;0,6..12,700;0,6..12,800;1,6..12,400&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "surface-container-lowest": "#ffffff", "primary-container": "#7263db", "on-surface-variant": "#474553", "on-primary-fixed-variant": "#4330aa", "secondary-fixed-dim": "#ffaeda", "surface-container": "#f2ebff", "on-tertiary-fixed-variant": "#00513b", "inverse-primary": "#c7bfff", "tertiary": "#00694d", "tertiary-fixed": "#9df4cf", "on-tertiary-fixed": "#002116", "on-background": "#1d1732", "secondary": "#8a486f", "on-secondary-fixed-variant": "#6f3157", "background": "#fdf7ff", "surface-tint": "#5c4bc3", "on-primary-container": "#fffbff", "on-tertiary": "#ffffff", "primary": "#5949c0", "inverse-on-surface": "#f5eeff", "on-secondary-fixed": "#3a0329", "surface-container-low": "#f8f1ff", "on-tertiary-container": "#f5fff8", "error": "#ba1a1a", "tertiary-fixed-dim": "#81d7b4", "secondary-container": "#ffaeda", "on-error-container": "#93000a", "on-error": "#ffffff", "on-primary-fixed": "#180065", "on-surface": "#1d1732", "on-primary": "#ffffff", "tertiary-container": "#298365", "surface-container-highest": "#e7deff", "surface-container-high": "#ede4ff", "on-secondary-container": "#7c3d63", "primary-fixed-dim": "#c7bfff", "primary-fixed": "#e5deff", "error-container": "#ffdad6", "surface-variant": "#e7deff", "surface": "#fdf7ff", "inverse-surface": "#332c48", "secondary-fixed": "#ffd8ea", "outline-variant": "#c9c4d5", "surface-bright": "#fdf7ff", "outline": "#787584", "on-secondary": "#ffffff", "surface-dim": "#dfd5f9" }, "borderRadius": { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" }, "spacing": { "space-lg": "1.25rem", "space-xs": "0.25rem", "gutter": "1rem", "margin": "1rem", "space-md": "1rem", "space-xl": "1.5rem", "space-sm": "0.5rem" }, "fontFamily": { "headline-md": ["Nunito Sans"], "headline-lg": ["Nunito Sans"], "body-md": ["Nunito Sans"], "body-lg": ["Nunito Sans"], "subhead-sm": ["Nunito Sans"], "subhead-lg": ["Nunito Sans"], "label-sm": ["Nunito Sans"], "label-md": ["Nunito Sans"], "display": ["Nunito Sans"], "headline-sm": ["Nunito Sans"] }, "fontSize": { "headline-md": ["22px", { "lineHeight": "28px", "fontWeight": "800" }], "headline-lg": ["26px", { "lineHeight": "32px", "fontWeight": "800" }], "body-md": ["14px", { "lineHeight": "21px", "fontWeight": "400" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "subhead-sm": ["14px", { "lineHeight": "20px", "fontWeight": "600" }], "subhead-lg": ["16px", { "lineHeight": "22px", "fontWeight": "600" }], "label-sm": ["11px", { "lineHeight": "14px", "fontWeight": "700" }], "label-md": ["13px", { "lineHeight": "18px", "fontWeight": "600" }], "display": ["32px", { "lineHeight": "38px", "fontWeight": "800" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "800" }] } } } };</script><style>@layer base { html, body { width: 100%; margin: 0; padding: 0; } .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); } .pt-safe { padding-top: env(safe-area-inset-top, 0px); } } ::-webkit-scrollbar { display: none; }</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface font-body-md text-body-md antialiased min-h-screen flex flex-col justify-start items-center selection:bg-secondary-container selection:text-on-secondary-container"><div class="w-full max-w-[390px] min-h-screen flex flex-col relative bg-surface mx-auto"><div aria-hidden="true" class="w-full h-[56px] shrink-0 pointer-events-none"></div><main class="flex-1 flex flex-col relative w-full px-margin pb-safe bg-surface"><div class="flex flex-col w-full pb-28">
+<!-- Top Progress Indicator -->
+<div class="flex flex-col w-full">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Step 1 of 3</span>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-primary font-bold">
+<span>✨ Profile Setup</span>
+</span>
+</div>
+<!-- 3-segment progress pill bar (height 6px, 6px gap) -->
+<div class="grid grid-cols-3 gap-1.5 w-full h-1.5">
+<div class="h-full rounded-full bg-primary transition-all duration-300"></div>
+<div class="h-full rounded-full bg-surface-container-highest"></div>
+<div class="h-full rounded-full bg-surface-container-highest"></div>
+</div>
+</div>
+<!-- Header Section -->
+<div class="mt-6 mb-6">
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight flex items-center gap-2">
+<span>Let's set you up</span>
+<span class="text-2xl animate-bounce">👋</span>
+</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1.5 leading-relaxed">
+      Pick a nickname. It's the only thing people see before you match.
+    </p>
+</div>
+<!-- Interactive Form Area -->
+<form class="flex flex-col w-full space-y-6" id="onboarding-step1-form" onsubmit="event.preventDefault();">
+<!-- Field 1: Nickname -->
+<div class="flex flex-col w-full">
+<div class="flex items-center justify-between mb-2">
+<label class="font-subhead-sm text-subhead-sm text-on-surface" for="nickname-input">Nickname</label>
+<span class="font-label-sm text-label-sm text-tertiary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+          Campus Safe
+        </span>
+</div>
+<!-- Input Shell (No visual borders, tonal shift + shadow) -->
+<div class="relative w-full h-14 bg-surface-container-lowest rounded-2xl px-4 flex items-center justify-between shadow-sm transition-all duration-200" id="input-container">
+<input autocomplete="off" class="w-full h-full bg-transparent font-subhead-lg text-subhead-lg text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none pr-3" id="nickname-input" maxlength="30" placeholder="e.g. Mango" type="text" value="Mango"/>
+<div class="flex items-center gap-2 shrink-0">
+<button aria-label="Clear text" class="text-on-surface-variant/60 hover:text-on-surface transition-colors p-1 flex items-center justify-center" id="clear-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">cancel</span>
+</button>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium" id="char-counter">5/30</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1.5 px-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant">2 to 30 characters</span>
+<span class="font-label-sm text-label-sm text-primary font-semibold">Keep it cute &amp; friendly</span>
+</div>
+</div>
+<!-- Field 2: 'I am' Identity / Gender Selection -->
+<div class="flex flex-col w-full">
+<div class="flex items-center justify-between mb-2.5">
+<label class="font-subhead-sm text-subhead-sm text-on-surface">I am</label>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Used for smart pairing</span>
+</div>
+<!-- Selectable Cards Grid -->
+<div class="grid grid-cols-2 gap-3 w-full" id="gender-selector">
+<!-- Male Card (Unselected State) -->
+<button class="gender-btn relative p-5 rounded-3xl bg-surface-container-lowest text-center flex flex-col items-center justify-center shadow-sm hover:shadow transition-all duration-200 group active:scale-[0.98]" data-gender="male" type="button">
+<div class="w-16 h-16 rounded-full bg-surface-container flex items-center justify-center mb-1 transition-transform group-hover:scale-105">
+<span aria-label="Male avatar" class="text-4xl select-none" role="img">🙋‍♂️</span>
+</div>
+<span class="gender-title font-subhead-lg text-subhead-lg text-on-surface mt-2">Male</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">Dorm A &amp; West</span>
+<div class="check-badge absolute top-3.5 right-3.5 w-6 h-6 rounded-full bg-primary text-on-primary hidden items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[15px] font-bold">check</span>
+</div>
+</button>
+<!-- Female Card (Selected State) -->
+<button class="gender-btn relative p-5 rounded-3xl bg-surface-container-high text-center flex flex-col items-center justify-center shadow-md transition-all duration-200 group active:scale-[0.98]" data-gender="female" type="button">
+<div class="w-16 h-16 rounded-full bg-surface-container-lowest flex items-center justify-center mb-1 shadow-sm transition-transform group-hover:scale-105">
+<span aria-label="Female avatar" class="text-4xl select-none" role="img">🙋‍♀️</span>
+</div>
+<span class="gender-title font-subhead-lg text-subhead-lg text-primary font-bold mt-2">Female</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant mt-0.5">Dorm B &amp; East</span>
+<!-- Active Checkmark Indicator Badge -->
+<div class="check-badge absolute top-3.5 right-3.5 w-6 h-6 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-[15px] font-bold">check</span>
+</div>
+</button>
+</div>
+<!-- Info Callout Micro-container -->
+<div class="mt-3.5 p-3.5 rounded-2xl bg-surface-container flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 text-on-surface text-base">
+<span>🔒</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface text-xs leading-tight">
+<strong class="font-semibold text-on-surface">Heads up:</strong> you can't change this later for verified matching.
+        </p>
+</div>
+</div>
+</form>
+<!-- Campus Vibe Pill Strip -->
+<div class="mt-6 p-4 rounded-2xl bg-surface-container-low flex items-center justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-9 h-9 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-sm font-bold">
+<span>✨</span>
+</div>
+<div class="flex flex-col">
+<span class="font-subhead-sm text-subhead-sm text-on-surface">Campus Radius Active</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Connected with 1,420 students today</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary text-xl">bolt</span>
+</div>
+<!-- Bottom Pinned Action Floating Bar -->
+<div class="fixed bottom-0 left-0 right-0 max-w-[390px] mx-auto px-margin pb-6 pt-3 bg-gradient-to-t from-surface via-surface/95 to-transparent pointer-events-auto z-40">
+<!-- Primary CTA Pill Button -->
+<button class="w-full h-[52px] rounded-full bg-primary hover:bg-primary-container text-on-primary font-subhead-lg text-subhead-lg flex items-center justify-center gap-2 shadow-lg shadow-primary/25 active:scale-[0.98] transition-all" id="submit-step1-btn" type="button">
+<span>Continue</span>
+<span class="material-symbols-outlined text-lg">arrow_forward</span>
+</button>
+<!-- Micro Privacy Clarification -->
+<p class="font-label-sm text-label-sm text-on-surface-variant text-center mt-2.5 flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-tertiary" style="font-variation-settings: 'FILL' 1;">lock</span>
+<span>Your real name stays private until you match.</span>
+</p>
+</div>
+</div>
+<script>
+  (function initStepOne() {
+    const input = document.getElementById('nickname-input');
+    const charCounter = document.getElementById('char-counter');
+    const clearBtn = document.getElementById('clear-btn');
+    const inputContainer = document.getElementById('input-container');
+    const genderBtns = document.querySelectorAll('.gender-btn');
+    const submitBtn = document.getElementById('submit-step1-btn');
+
+    let selectedGender = 'female';
+
+    function updateCounter() {
+      const len = input.value.trim().length;
+      charCounter.textContent = `${len}/30`;
+      if (len >= 2 && len <= 30) {
+        charCounter.classList.remove('text-error');
+        charCounter.classList.add('text-on-surface-variant');
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+      } else {
+        charCounter.classList.add('text-error');
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      }
+    }
+
+    input.addEventListener('input', updateCounter);
+    input.addEventListener('focus', () => {
+      inputContainer.classList.add('shadow-md', 'bg-surface-container-low');
+    });
+    input.addEventListener('blur', () => {
+      inputContainer.classList.remove('shadow-md', 'bg-surface-container-low');
+    });
+
+    clearBtn.addEventListener('click', () => {
+      input.value = '';
+      input.focus();
+      updateCounter();
+    });
+
+    genderBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const gender = btn.getAttribute('data-gender');
+        selectedGender = gender;
+
+        genderBtns.forEach(other => {
+          const isTarget = other === btn;
+          const badge = other.querySelector('.check-badge');
+          const title = other.querySelector('.gender-title');
+
+          if (isTarget) {
+            other.className = 'gender-btn relative p-5 rounded-3xl bg-surface-container-high text-center flex flex-col items-center justify-center shadow-md transition-all duration-200 group active:scale-[0.98]';
+            title.className = 'gender-title font-subhead-lg text-subhead-lg text-primary font-bold mt-2';
+            if (badge) {
+              badge.classList.remove('hidden');
+              badge.classList.add('flex');
+            }
+          } else {
+            other.className = 'gender-btn relative p-5 rounded-3xl bg-surface-container-lowest text-center flex flex-col items-center justify-center shadow-sm hover:shadow transition-all duration-200 group active:scale-[0.98]';
+            title.className = 'gender-title font-subhead-lg text-subhead-lg text-on-surface mt-2';
+            if (badge) {
+              badge.classList.add('hidden');
+              badge.classList.remove('flex');
+            }
+          }
+        });
+      });
+    });
+
+    submitBtn.addEventListener('click', () => {
+      if (input.value.trim().length >= 2) {
+        submitBtn.innerHTML = `
+          <span class="inline-block animate-spin mr-1">💫</span>
+          <span>Saving Spark...</span>
+        `;
+        setTimeout(() => {
+          submitBtn.innerHTML = `
+            <span>Ready for Step 2</span>
+            <span class="material-symbols-outlined text-lg">check</span>
+          `;
+        }, 600);
+      } else {
+        input.focus();
+      }
+    });
+
+    updateCounter();
+  })();
+</script></main></div></body></html>

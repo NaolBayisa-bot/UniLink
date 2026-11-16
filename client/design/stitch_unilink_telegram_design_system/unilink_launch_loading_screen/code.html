@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Unilink - Welcome</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            nunito: ['Nunito', 'sans-serif'],
+          },
+          colors: {
+            unilink: {
+              lavender: '#8B7CF6',
+              softLavender: '#E9E3FF',
+              blush: '#F9A8D4',
+              blushLight: '#FCE7F3',
+              mint: '#7DD3B0',
+              text: '#2B2540',
+              muted: '#6F6A85',
+              bgGradientStart: '#E9E3FF',
+              bgGradientEnd: '#FCE7F3'
+            }
+          },
+          keyframes: {
+            bounceDot: {
+              '0%, 80%, 100%': { transform: 'scale(0.75)', opacity: '0.4' },
+              '40%': { transform: 'scale(1.2)', opacity: '1' },
+            },
+            floatSlow: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' }
+            },
+            pulseSubtle: {
+              '0%, 100%': { transform: 'scale(1)', opacity: '0.9' },
+              '50%': { transform: 'scale(1.04)', opacity: '1' }
+            }
+          },
+          animation: {
+            'bounce-dot-1': 'bounceDot 1.4s infinite ease-in-out',
+            'bounce-dot-2': 'bounceDot 1.4s infinite ease-in-out 0.2s',
+            'bounce-dot-3': 'bounceDot 1.4s infinite ease-in-out 0.4s',
+            'float-icon': 'floatSlow 4s ease-in-out infinite',
+            'pulse-subtle': 'pulseSubtle 3s ease-in-out infinite'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Nunito', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-[#E9E3FF] to-[#FCE7F3] text-[#2B2540] min-h-screen w-full flex flex-col justify-between items-center relative overflow-hidden antialiased">
+  
+  <!-- Ambient glowing backdrop blurs for playful romantic feel -->
+  <div class="absolute -top-16 -left-16 w-64 h-64 bg-[#8B7CF6]/15 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-16 -right-16 w-72 h-72 bg-[#F9A8D4]/25 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- Top Telegram Safe Area (56px) - intentionally empty per design system spec -->
+  <div class="w-full h-14 shrink-0 pointer-events-none" aria-hidden="true"></div>
+
+  <!-- Center Content: Logo, Wordmark & Tagline -->
+  <main class="w-full flex-1 flex flex-col items-center justify-center px-8 text-center -mt-6">
+    <!-- App Logo Icon -->
+    <div class="relative group animate-float-icon">
+      <!-- Soft lavender drop shadow glow -->
+      <div class="absolute inset-0 bg-[#8B7CF6]/30 rounded-[28px] blur-xl transform translate-y-3"></div>
+      
+      <div class="relative w-[88px] h-[88px] rounded-[24px] bg-[#8B7CF6] flex items-center justify-center shadow-lg shadow-[#8B7CF6]/25 border border-white/40">
+        <!-- SVG: Two overlapping speech-bubble hearts in white forming a link -->
+        <svg class="w-14 h-14" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Left Heart Speech Bubble -->
+          <path d="M22 17C16.477 17 12 21.477 12 27C12 34.5 20.5 41 26 43.5C26.5 43.7 27 43.8 27.5 43.8" stroke="white" stroke-width="3.2" stroke-linecap="round"/>
+          <path d="M22 17C24.8 17 27.3 18.8 28 21.5C28.7 18.8 31.2 17 34 17C39.523 17 44 21.477 44 27C44 34.5 35.5 41 30 43.5" stroke="white" stroke-width="3.2" stroke-linecap="round"/>
+          <!-- Overlapping connected mini link in center -->
+          <path d="M24 27.5C24 24.5 26.5 22.8 28 24.5C29.5 22.8 32 24.5 32 27.5C32 31.5 28 34.5 28 34.5C28 34.5 24 31.5 24 27.5Z" fill="white"/>
+          <!-- Speech Bubble Tails -->
+          <path d="M17 39L13.5 43.5L19.5 42" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M39 39L42.5 43.5L36.5 42" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Wordmark & Tagline -->
+    <div class="mt-7 flex flex-col items-center">
+      <h1 class="text-[36px] font-black tracking-tight text-[#2B2540] leading-none font-nunito">
+        Unilink
+      </h1>
+      <p class="mt-3.5 text-[16px] font-semibold text-[#6F6A85] flex items-center justify-center gap-1.5 leading-snug">
+        <span>Meet people from your campus</span>
+        <span class="inline-block transform hover:scale-125 transition-transform duration-200">💜</span>
+      </p>
+    </div>
+  </main>
+
+  <!-- Bottom Area: Animated Loading Dots & Telegram Sign-In Text -->
+  <footer class="w-full shrink-0 flex flex-col items-center pb-12 pt-4 px-6 z-10">
+    <!-- Animated Lavender Loading Dots -->
+    <div class="flex items-center gap-2 mb-3.5" aria-label="Loading">
+      <div class="w-2.5 h-2.5 rounded-full bg-[#8B7CF6] animate-bounce-dot-1"></div>
+      <div class="w-2.5 h-2.5 rounded-full bg-[#8B7CF6] animate-bounce-dot-2"></div>
+      <div class="w-2.5 h-2.5 rounded-full bg-[#8B7CF6] animate-bounce-dot-3"></div>
+    </div>
+
+    <!-- Telegram status text -->
+    <p class="text-[13px] font-semibold tracking-wide text-[#6F6A85]/90 flex items-center justify-center gap-1.5">
+      <span>Signing you in with Telegram...</span>
+    </p>
+
+    <!-- Safe area padding for modern bezel gestures -->
+    <div class="h-2 w-full"></div>
+  </footer>
+
+</body>
+</html>
