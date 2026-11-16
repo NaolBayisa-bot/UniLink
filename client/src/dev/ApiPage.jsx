@@ -1,11 +1,11 @@
 import React from 'react'
 import {
-  useBrowseQuery,
-  useKeywordsQuery,
-  useLikeMutation,
-  useMatchesQuery,
-  useMeQuery,
-  useProfileMutation,
+  useBrowse,
+  useKeywords,
+  useLikeUser,
+  useMatches,
+  useMe,
+  useUpdateProfile,
 } from '../api/queries'
 
 function Section({ title, children }) {
@@ -18,12 +18,12 @@ function Section({ title, children }) {
 }
 
 export default function ApiPage() {
-  const meQuery = useMeQuery()
-  const browseQuery = useBrowseQuery()
-  const matchesQuery = useMatchesQuery()
-  const keywordsQuery = useKeywordsQuery()
-  const profileMutation = useProfileMutation()
-  const likeMutation = useLikeMutation()
+  const meQuery = useMe()
+  const browseQuery = useBrowse()
+  const matchesQuery = useMatches()
+  const keywordsQuery = useKeywords()
+  const profileMutation = useUpdateProfile()
+  const likeMutation = useLikeUser()
 
   return (
     <main style={{ padding: 24, maxWidth: 980, margin: '0 auto', fontFamily: 'sans-serif' }}>

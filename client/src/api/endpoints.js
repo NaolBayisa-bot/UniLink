@@ -22,6 +22,13 @@ export function getBrowse() {
   return apiFetch('/browse')
 }
 
+export function passUser(payload) {
+  return apiFetch('/pass', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
 export function likeUser(payload) {
   return apiFetch('/like', {
     method: 'POST',
@@ -73,4 +80,76 @@ export function updateKeywords(payload) {
     method: 'POST',
     body: payload,
   })
+}
+
+// Photo upload endpoints
+export function photoUploadSignature() {
+  return apiFetch('/photo/upload-signature', {
+    method: 'POST',
+  })
+}
+
+export function confirmPhoto(payload) {
+  return apiFetch('/photo/confirm', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+// Event endpoints
+export function getTicket(matchId) {
+  return apiFetch('/events/ticket', {
+    method: 'POST',
+    body: { match_id: matchId },
+  })
+}
+
+export function getEvents() {
+  return apiFetch('/events')
+}
+
+// Admin endpoints
+export function getPendingPhotos() {
+  return apiFetch('/admin/photos/pending')
+}
+
+export function reviewPhoto(payload) {
+  return apiFetch('/admin/photos/review', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export function getAdminReports(status) {
+  const url = status ? `/admin/reports?status=${encodeURIComponent(status)}` : '/admin/reports'
+  return apiFetch(url)
+}
+
+export function resolveReport(payload) {
+  return apiFetch('/admin/resolve-report', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export function banUser(payload) {
+  return apiFetch('/admin/ban-user', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export function getAdminUser(userId) {
+  return apiFetch(`/admin/users/${userId}`)
+}
+
+export function setVerificationLevel(payload) {
+  return apiFetch('/admin/set-verification-level', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export function getAdminUsersByIp(signupIp) {
+  return apiFetch(`/admin/users?signup_ip=${encodeURIComponent(signupIp)}`)
 }

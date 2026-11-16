@@ -9,6 +9,9 @@ let profile = {
   profile_complete: true,
 }
 
+const pendingPhotos = []
+const adminUsers = new Map()
+
 const browseCandidates = [
   { id: 1, nickname: 'Mila', created_at: '2024-10-01T10:00:00.000Z' },
   { id: 2, nickname: 'Darius', created_at: '2024-10-02T10:00:00.000Z' },
@@ -387,6 +390,155 @@ export const handlers = [
     }
 
     return HttpResponse.json({ keyword_ids: keywordIds })
+  }),
+
+  http.post('http://localhost/pass', async ({ request }) => {
+    handleOfflineFailure()
+    const body = await request.json()
+    const userId = Number(body.user_id)
+
+    if (!Number.isFinite(userId)) {
+      return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+    }
+
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // Photo upload
+  http.post('http://localhost/photo/upload-signature', () => {
+    handleOfflineFailure()
+    return HttpResponse.json({
+      upload_url: 'https://upload.example.com',
+      fields: {},
+      photo_url: '/photo/view?t=mock-ticket',
+    })
+  }),
+
+  http.post('http://localhost/photo/confirm', async ({ request }) => {
+    handleOfflineFailure()
+    const body = await request.json()
+    const ticket = body.ticket
+
+    if (!ticket) {
+      return HttpResponse.json({ error: 'invalid_ticket' }, { status: 400 })
+    }
+
+    return HttpResponse.json({
+      photo_url: '/photo/view?t=' + ticket,
+      photo_expires_in: 300,
+    })
+  }),
+
+  // Events
+  http.post('http://localhost/events/ticket', async ({ request }) => {
+    handleOfflineFailure()
+    const body = await request.json()
+    const matchId = body.match_id
+
+    if (!matchId) {
+      return HttpResponse.json({ error: 'invalid_match_id' }, { status: 400 })
+    }
+
+    return HttpResponse.json({ ticket: 'ticket-' + matchId })
+  }),
+
+  http.get('http://localhost/events', () => {
+    handleOfflineFailure()
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // Admin
+  http.get('http://localhost/admin/photos/pending', () => {
+    handleOfflineFailure()
+    return HttpResponse.json(pendingPhotos)
+  }),
+
+  http.post('http://localhost/admin/photos/review', async ({ request }) => {
+    handleOfflineFailure()
+    const body = await request.json()
+    const userId = Number(body.user_id)
+    const decision = body.decision
+
+    if (!userId || !decision) {
+      return HttpResponse.json({ error: 'not_pending' }, { status: 409 })
+    }
+
+    return HttpResponse.json({ user_id: userId, decision })
+  }),
+
+  http.get('http://localhost/admin/reports', ({ url }) => {
+    handleOfflineFailure()
+    const status = url.searchParams.get('status')
+    let filtered = reports
+
+    if (status) {
+      filtered = reports.filter((r) => r.status === status)
+    }
+
+    return HttpResponse.json(filtered)
+  }),
+
+  http.post('http://localhost/admin/resolve-report', async ({ request }) => {
+    handleOfflineFailure()
+    const body = await request.json()
+    const reportId = body.report_id
+
+    const report = reports.find((r) => r.id === Number(reportId))
+    if (!report) {
+      return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+    }
+
+    report.status = 'resolved'
+    return HttpResponse.json({ report_id: reportId, status: 'resolved' })
+  }),
+
+  http.post('http://localhost/admin/ban-user', async ({ request }) => {
+    handleOfflineFailure()
+    const body = await request.json()
+    const userId = Number(body.user_id)
+
+    if (!Number.isFinite(userId)) {
+      return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+    }
+
+    return HttpResponse.json({ user_id: userId, status: 'banned' })
+  }),
+
+  http.get('http://localhost/admin/users/:userId', ({ params }) => {
+    handleOfflineFailure()
+    const userId = Number(params.userId)
+    const user = adminUsers.get(userId)
+
+    if (!user) {
+      return HttpResponse.json({ error: 'not_found' }, { status: 404 })
+    }
+
+    return HttpResponse.json(user)
+  }),
+
+  http.post('http://localhost/admin/set-verification-level', async ({ request }) => {
+    handleOfflineFailure()
+    const body = await request.json()
+    const userId = Number(body.user_id)
+    const level = body.verification_level
+
+    if (!userId || !level) {
+      return HttpResponse.json({ error: 'invalid_request' }, { status: 400 })
+    }
+
+    return HttpResponse.json({ user_id: userId, verification_level: level })
+  }),
+
+  http.get('http://localhost/admin/users', ({ url }) => {
+    handleOfflineFailure()
+    const signupIp = url.searchParams.get('signup_ip')
+    let filtered = Array.from(adminUsers.values())
+
+    if (signupIp) {
+      filtered = filtered.filter((u) => u.signup_ip === signupIp)
+    }
+
+    return HttpResponse.json(filtered)
   }),
 ]
 
