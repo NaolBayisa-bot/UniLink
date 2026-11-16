@@ -1,4 +1,5 @@
 import React from 'react'
+import { AuthProvider } from './app/providers/session-provider.jsx'
 import TokensPage from './dev/TokensPage'
 import GalleryPage from './dev/GalleryPage'
 import TelegramPage from './dev/TelegramPage'
@@ -19,10 +20,12 @@ export default function App() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background text-on-background">
-      <div className="rounded-md border border-outline-variant bg-surface-container-lowest px-8 py-6 shadow-card">
-        <h1 className="text-3xl font-bold tracking-tight">Unilink</h1>
-      </div>
-    </main>
+    <AuthProvider>
+      <main className="flex min-h-screen items-center justify-center bg-background text-on-background">
+        <div className="rounded-md border border-outline-variant bg-surface-container-lowest px-8 py-6 shadow-card">
+          <h1 className="text-3xl font-bold tracking-tight">Unilink</h1>
+        </div>
+      </main>
+    </AuthProvider>
   )
 }
